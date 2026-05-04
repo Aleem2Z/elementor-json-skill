@@ -1,0 +1,8 @@
+{
+  "name": "elementor-json",
+  "description": "Convert Figma/screenshot designs into Elementor template JSON for WordPress. Reference for container settings, widget catalog (heading, button, form, accordion, video), responsive variants, and custom_css usage.",
+  "author": {
+    "name": "aleem2z"
+  },
+  "homepage": "https://github.com/aleem2z/elementor-json-skill"
+}

@@ -1,0 +1,17 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "aleem2z-skills",
+  "description": "Claude Code skills by aleem2z — WordPress and Elementor workflows.",
+  "owner": {
+    "name": "aleem2z"
+  },
+  "plugins": [
+    {
+      "name": "elementor-json",
+      "description": "Convert designs to Elementor-compatible JSON templates for WordPress. Includes widget catalog, container settings, responsive variants, and custom_css guidance.",
+      "category": "wordpress",
+      "source": ".",
+      "homepage": "https://github.com/aleem2z/elementor-json-skill"
+    }
+  ]
+}
