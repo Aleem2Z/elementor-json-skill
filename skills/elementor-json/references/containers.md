@@ -33,7 +33,7 @@
 
 `content_width: "full"` removes the default 1140px max. Pair with `max_width` for a custom inner cap.
 
-`background_background: "classic"` is the trigger that activates `background_color` / `background_image`. Forgetting it makes the color setting silently no-op.
+`background_background: "classic"` is the trigger that activates `background_color` / `background_image`. Forgetting it makes the color setting silently no-op. Same pattern for `box_shadow_box_shadow_type: "yes"` activating the shadow, and `border_border: "solid"` activating border width/color.
 
 ## Responsive variants
 
@@ -51,7 +51,7 @@ Append `_tablet` or `_mobile` to any setting. The base value applies above 1024p
 }
 ```
 
-Padding and margin objects are responsive in full — provide a complete `padding_tablet` object, not just one side:
+Padding and margin are responsive in full — provide a complete `padding_tablet` object, not just one side:
 
 ```json
 {
@@ -60,6 +60,68 @@ Padding and margin objects are responsive in full — provide a complete `paddin
   "padding_mobile": {"unit": "px", "top": "40", "right": "16", "bottom": "40", "left": "16", "isLinked": false}
 }
 ```
+
+## Borders
+
+```json
+{
+  "border_border": "solid",
+  "border_width": {"unit": "px", "top": "1", "right": "1", "bottom": "1", "left": "1", "isLinked": true},
+  "border_color": "#E5E7EB",
+  "border_radius": {"unit": "px", "top": "16", "right": "16", "bottom": "16", "left": "16", "isLinked": true}
+}
+```
+
+`border_border` is the activation flag — `"solid"`, `"double"`, `"dotted"`, `"dashed"`, or `"groove"`. Without it, `border_width` and `border_color` are ignored.
+
+`border_radius` works independently — it does NOT need `border_border` set.
+
+## Hover states
+
+Hover settings use the suffix `_hover` (or `_hover_*` for activation flags). They override the base value when the user hovers the element.
+
+```json
+{
+  "background_background": "classic",
+  "background_color": "#FFFFFF",
+  "background_hover_background": "gradient",
+  "background_hover_color": "#FFFFFF",
+  "background_hover_color_b": "#FDF2EF",
+  "background_hover_gradient_angle": {"unit": "deg", "size": 90},
+  "background_hover_gradient_position": "center right",
+  "border_color": "#E2E8F0",
+  "border_color_hover": "#60A5FA",
+  "box_shadow_box_shadow_type_hover": "yes",
+  "box_shadow_box_shadow_hover": {"horizontal": 0, "vertical": 4, "blur": 20, "spread": 0, "color": "rgba(59, 130, 246, 0.15)"}
+}
+```
+
+`background_hover_background` activates the hover background block (just like `background_background` activates the base). `box_shadow_box_shadow_type_hover` activates the hover shadow.
+
+For a hover transition that animates smoothly (rather than snapping), use `custom_css`: `selector { transition: background 300ms ease, box-shadow 300ms ease; }`. Elementor doesn't expose a transition control in the UI.
+
+## Background images
+
+```json
+{
+  "background_background": "classic",
+  "background_image": {
+    "url": "https://example.com/bg.jpg",
+    "id": 479,
+    "alt": "",
+    "source": "library"
+  },
+  "background_position": "center center",
+  "background_size": "cover",
+  "background_overlay_background": "classic",
+  "background_overlay_color": "rgba(0, 0, 0, 0.4)",
+  "background_overlay_opacity": {"unit": "px", "size": 0.53}
+}
+```
+
+`background_overlay_*` is a separate overlay layer rendered on top of the image — useful for darkening hero photos so white text stays readable. `background_overlay_opacity` is a 0–1 number despite the `unit: "px"` (Elementor quirk).
+
+For templates meant to be reused, leave `background_image: {"url": "", "id": ""}` empty so the user attaches their own image after import.
 
 ## Hierarchy rules
 
@@ -73,14 +135,14 @@ Padding and margin objects are responsive in full — provide a complete `paddin
 ## Section patterns
 
 **Hero (full-bleed with form card):**
-- Outer container: `min_height: 100vh`, background image/color, `flex_align_items: center`
-- Inner row container: `max_width: 1200`, `flex_direction: row`, `flex_gap: 50`
-- Left column container: heading + text-editor + button widgets
-- Right column container: form widget with elevated background
+- Outer: `min_height: 100vh`, background image/color, `flex_align_items: center`
+- Inner row: `max_width: 1200`, `flex_direction: row`, `flex_gap: 50`
+- Left column: heading + text-editor + button
+- Right column: form widget with elevated background
 
 **Card grid:**
-- Outer container: `flex_direction: row`, `flex_wrap: "wrap"`, `flex_gap: {column: 24, row: 24}`
-- Repeating card containers: `width: 33.33%`, `width_tablet: 50%`, `width_mobile: 100%`, with background, shadow, padding
+- Outer: `flex_direction: row`, `flex_wrap: "wrap"`, `flex_gap: {column: 24, row: 24}`
+- Repeating cards: `width: 33.33%`, `width_tablet: 50%`, `width_mobile: 100%`, with background, shadow, padding, hover state
 - Widgets inside each card
 
 **Two-column with sticky aside:**

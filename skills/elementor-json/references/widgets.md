@@ -1,8 +1,8 @@
 # Widget catalog
 
-Every widget settings object accepts responsive suffixes (`_tablet`, `_mobile`) and the advanced `_padding` / `_margin` settings. See `containers.md` for those.
+Common (free Elementor) widgets. For Pro-only widgets (form, nested-accordion) see `pro-widgets.md`.
 
-Every widget has `"elements": []` and `"isInner": false` (yes, even when nested inside a container — the `isInner` flag is for containers, but widgets repeat it as `false`).
+Every widget settings object accepts responsive suffixes (`_tablet`, `_mobile`) and the advanced `_padding` / `_margin` settings — see `containers.md`. Every widget has `"elements": []` and `"isInner": false`.
 
 ## heading
 
@@ -52,7 +52,7 @@ Every widget has `"elements": []` and `"isInner": false` (yes, even when nested 
 }
 ```
 
-`editor` takes raw HTML. Use `<p>`, `<strong>`, `<em>`, `<a>`, `<ul>` — what TinyMCE would output.
+`editor` takes raw HTML — what TinyMCE would output: `<p>`, `<strong>`, `<em>`, `<a>`, `<ul>`.
 
 ## button
 
@@ -84,9 +84,7 @@ Every widget has `"elements": []` and `"isInner": false` (yes, even when nested 
 }
 ```
 
-Button uses `text_padding` (not `padding`) for inner padding. Hover color is `button_background_hover_color`, not `background_hover_color`.
-
-Drop the `selected_icon` block entirely if there's no icon — leaving it with empty `value` shows a missing-icon placeholder.
+Button uses `text_padding` (not `padding`) for inner padding. Hover background is `button_background_hover_color`. Drop the `selected_icon` block entirely if there's no icon — leaving it with empty `value` shows a missing-icon placeholder.
 
 ## image
 
@@ -108,6 +106,168 @@ Drop the `selected_icon` block entirely if there's no icon — leaving it with e
 ```
 
 Leave `image.url` and `image.id` empty in templates — the user replaces them with a Media Library image after import. `image_size: "full"` uses the original; `"large"`/`"medium"`/`"thumbnail"` use WordPress-generated sizes.
+
+## icon
+
+The single-icon widget. Common for feature cards, stat blocks, contact info.
+
+```json
+{
+  "id": "icon001",
+  "elType": "widget",
+  "widgetType": "icon",
+  "settings": {
+    "selected_icon": {"value": "fas fa-hands-helping", "library": "fa-solid"},
+    "view": "stacked",
+    "shape": "circle",
+    "primary_color": "#4591d5",
+    "secondary_color": "#FFFFFF",
+    "icon_color": "#FFFFFF",
+    "icon_size": {"unit": "px", "size": 36},
+    "icon_size_mobile": {"unit": "px", "size": 30},
+    "icon_padding": {"unit": "px", "top": "22", "right": "22", "bottom": "22", "left": "22", "isLinked": true},
+    "background_background": "classic",
+    "background_color": "#4591d5",
+    "border_radius": {"unit": "%", "top": "50", "right": "50", "bottom": "50", "left": "50", "isLinked": true},
+    "align": "center"
+  },
+  "elements": [],
+  "isInner": false
+}
+```
+
+`view`: `"default"` (icon only), `"stacked"` (icon on a colored background), or `"framed"` (icon inside a border frame).
+
+`shape`: `"circle"` or `"square"` — only meaningful when `view` is `stacked` or `framed`.
+
+For stacked/framed views, `primary_color` is the background (or frame) and `secondary_color` is the icon itself. For `default`, just use `icon_color`.
+
+## divider
+
+```json
+{
+  "id": "div001",
+  "elType": "widget",
+  "widgetType": "divider",
+  "settings": {
+    "width": {"unit": "px", "size": 40},
+    "weight": {"unit": "px", "size": 3},
+    "color": "#3B82F6",
+    "gap": {"unit": "px", "size": 0},
+    "_margin": {"unit": "px", "top": "12", "right": "0", "bottom": "15", "left": "0", "isLinked": false},
+    "_css_classes": "card-line"
+  },
+  "elements": [],
+  "isInner": false
+}
+```
+
+`width` is the line length. `weight` is its thickness. `gap` adds vertical space above + below the line. Add `"style": "dashed"` (or `"dotted"`, `"double"`) for non-solid lines.
+
+## icon-list
+
+Bulleted list with custom icon per item. Used heavily for feature lists.
+
+```json
+{
+  "id": "list001",
+  "elType": "widget",
+  "widgetType": "icon-list",
+  "settings": {
+    "icon_list": [
+      {"_id": "ben001", "text": "Same-Day Service", "selected_icon": {"value": "fas fa-check", "library": "fa-solid"}},
+      {"_id": "ben002", "text": "Free Consultation", "selected_icon": {"value": "fas fa-check", "library": "fa-solid"}},
+      {"_id": "ben003", "text": "100% Satisfaction", "selected_icon": {"value": "fas fa-check", "library": "fa-solid"}}
+    ],
+    "view": "inline",
+    "space_between": {"unit": "px", "size": 35},
+    "space_between_mobile": {"unit": "px", "size": 15},
+    "icon_color": "#FFFFFF",
+    "icon_color_hover": "#FFFFFF",
+    "icon_size": {"unit": "px", "size": 12},
+    "icon_self_align": "center",
+    "text_color": "#FFFFFF",
+    "text_color_hover": "#FFFFFF",
+    "text_indent": {"unit": "px", "size": 10},
+    "typography_typography": "custom",
+    "typography_font_size": {"unit": "rem", "size": 0.95},
+    "typography_font_weight": "600"
+  },
+  "elements": [],
+  "isInner": false
+}
+```
+
+`view`: `"traditional"` (vertical list) or `"inline"` (horizontal row). `space_between` is the gap between items in either direction.
+
+Each `icon_list[]` item can also accept a `link: {"url": "..."}` to make that one row a link.
+
+## star-rating
+
+```json
+{
+  "id": "rate001",
+  "elType": "widget",
+  "widgetType": "star-rating",
+  "settings": {
+    "title": "",
+    "rating_scale": 5,
+    "rating": 5,
+    "star_style": "font_awesome",
+    "unmarked_star_style": "solid",
+    "star_size": {"unit": "px", "size": 15},
+    "star_color": "#f5a623",
+    "star_unmarked_color": "#e0e0e0",
+    "align": "left",
+    "_margin": {"unit": "px", "top": "0", "right": "0", "bottom": "16", "left": "0", "isLinked": false}
+  },
+  "elements": [],
+  "isInner": false
+}
+```
+
+`rating` is a number 0–`rating_scale` (decimals work — `4.5` shows half a star). Leave `title: ""` for testimonial use; set it to label the rating.
+
+## gallery
+
+Image gallery with grid layout, lightbox, hover overlays.
+
+```json
+{
+  "id": "gall001",
+  "elType": "widget",
+  "widgetType": "gallery",
+  "settings": {
+    "gallery_type": "single",
+    "gallery": [
+      {"_id": "gi1", "id": "", "url": "https://placehold.co/600x450"},
+      {"_id": "gi2", "id": "", "url": "https://placehold.co/600x450"},
+      {"_id": "gi3", "id": "", "url": "https://placehold.co/600x450"}
+    ],
+    "gallery_layout": "grid",
+    "columns": "3",
+    "columns_tablet": "2",
+    "columns_mobile": "1",
+    "aspect_ratio": "0.75",
+    "gap": {"unit": "px", "size": 24},
+    "gap_mobile": {"unit": "px", "size": 16},
+    "link_to": "none",
+    "image_border_radius": {"unit": "px", "top": "12", "right": "12", "bottom": "12", "left": "12", "isLinked": true},
+    "overlay_hover_animation": "fade",
+    "show_title": "yes",
+    "show_description": "yes",
+    "title_tag": "h4"
+  },
+  "elements": [],
+  "isInner": false
+}
+```
+
+`gallery_type`: `"single"` (one gallery) or `"multiple"` (multiple tagged galleries with a filter bar — adds a `galleries[]` array of tag definitions).
+
+`link_to`: `"none"`, `"file"` (lightbox), or `"custom"`.
+
+`aspect_ratio`: as a string fraction — `"0.75"` = 4:3, `"0.5625"` = 16:9, `"1"` = square.
 
 ## video
 
@@ -131,9 +291,9 @@ Leave `image.url` and `image.id` empty in templates — the user replaces them w
 }
 ```
 
-`aspect_ratio` is the digits without the colon: `"169"` = 16:9, `"219"` = 21:9, `"43"` = 4:3.
+`aspect_ratio` here uses digits without the colon: `"169"` = 16:9, `"219"` = 21:9, `"43"` = 4:3 (different format from `gallery` — Elementor inconsistency).
 
-For Vimeo, use `video_type: "vimeo"` and `vimeo_url`. For self-hosted, `video_type: "hosted"` and `hosted_url`.
+For Vimeo, use `video_type: "vimeo"` and `vimeo_url`. Self-hosted: `video_type: "hosted"` and `hosted_url`.
 
 ## html (escape hatch)
 
@@ -148,138 +308,4 @@ For Vimeo, use `video_type: "vimeo"` and `vimeo_url`. For self-hosted, `video_ty
 }
 ```
 
-Use only when the design genuinely can't be expressed with native widgets. The `html` widget is opaque to the Elementor UI — values inside aren't editable through controls and don't respond to responsive breakpoints unless you write your own media queries inside the HTML's `<style>` block.
-
-## form (Elementor Pro)
-
-```json
-{
-  "id": "form001",
-  "elType": "widget",
-  "widgetType": "form",
-  "settings": {
-    "form_name": "Quote Form",
-    "form_fields": [
-      {"_id": "f1", "field_type": "text", "field_label": "Name", "placeholder": "John", "required": "true", "width": "50", "width_mobile": "100"},
-      {"_id": "f2", "field_type": "email", "field_label": "Email", "placeholder": "john@example.com", "required": "true", "width": "50", "width_mobile": "100"},
-      {"_id": "f3", "field_type": "textarea", "field_label": "Message", "placeholder": "...", "width": "100", "rows": "4"}
-    ],
-    "button_text": "Submit",
-    "button_width": "100",
-    "button_background_color": "#E63946",
-    "button_hover_background_color": "#D32F3F",
-    "button_text_color": "#FFFFFF",
-    "button_border_radius": {"unit": "px", "top": "50", "right": "50", "bottom": "50", "left": "50", "isLinked": true},
-    "button_typography_typography": "custom",
-    "button_typography_font_size": {"unit": "rem", "size": 1.05},
-    "button_typography_font_weight": "700",
-    "label_color": "#1B2A4A",
-    "label_typography_typography": "custom",
-    "label_typography_font_size": {"unit": "rem", "size": 0.875},
-    "label_typography_font_weight": "700",
-    "field_background_color": "#FFFFFF",
-    "field_border_color": "#E5E7EB",
-    "field_border_radius": {"unit": "px", "top": "8", "right": "8", "bottom": "8", "left": "8", "isLinked": true},
-    "field_text_color": "#374151",
-    "field_placeholder_color": "#9CA3AF",
-    "column_gap": {"unit": "px", "size": 15},
-    "row_gap": {"unit": "px", "size": 15},
-    "mark_required_color": "#E63946"
-  },
-  "elements": [],
-  "isInner": false
-}
-```
-
-Form widget is **Pro-only**. On a free Elementor install, the import succeeds but the widget renders as "missing widget" until Pro is activated.
-
-`width` on each field is a percentage as a string: `"50"` = half-width, `"100"` = full row. `width_mobile` lets fields stack on phones.
-
-## nested-accordion (Elementor Pro)
-
-The modern container-based accordion. Each item has a title in `items` array AND a corresponding locked container in `elements` for the body content.
-
-```json
-{
-  "id": "acc001",
-  "elType": "widget",
-  "widgetType": "nested-accordion",
-  "settings": {
-    "items": [
-      {"item_title": "First Item Title", "_id": "item1"},
-      {"item_title": "Second Item Title", "_id": "item2"}
-    ],
-    "accordion_item_title_icon": {"value": "fas fa-chevron-down", "library": "fa-solid"},
-    "accordion_item_title_icon_active": {"value": "fas fa-chevron-up", "library": "fa-solid"},
-    "accordion_item_title_position_horizontal": "space-between",
-    "title_tag": "h3",
-    "accordion_item_title_color": "#0F172A",
-    "accordion_item_title_typography_typography": "custom",
-    "accordion_item_title_typography_font_size": {"unit": "rem", "size": 1},
-    "accordion_item_title_typography_font_weight": "600",
-    "icon_color": "#64748B",
-    "icon_active_color": "#64748B",
-    "icon_size": {"unit": "px", "size": 14},
-    "accordion_item_title_padding": {"unit": "px", "top": "20", "right": "24", "bottom": "20", "left": "24", "isLinked": false},
-    "accordion_border_border": "solid",
-    "accordion_border_width": {"unit": "px", "top": "1", "right": "1", "bottom": "1", "left": "1", "isLinked": true},
-    "accordion_border_color": "#E2E8F0",
-    "accordion_border_radius": {"unit": "px", "top": "12", "right": "12", "bottom": "12", "left": "12", "isLinked": true},
-    "accordions_gap": {"unit": "px", "size": 12},
-    "accordion_background": "#FFFFFF"
-  },
-  "elements": [
-    {
-      "id": "item1cont",
-      "elType": "container",
-      "settings": {"_title": "First Item Title", "content_width": "full"},
-      "elements": [
-        {
-          "id": "item1text",
-          "elType": "widget",
-          "widgetType": "text-editor",
-          "settings": {
-            "editor": "<p>Content for first item</p>",
-            "text_color": "#64748B",
-            "typography_typography": "custom",
-            "typography_font_size": {"unit": "rem", "size": 0.9375},
-            "typography_line_height": {"unit": "em", "size": 1.7}
-          },
-          "elements": [],
-          "isInner": false
-        }
-      ],
-      "isInner": true,
-      "isLocked": true
-    },
-    {
-      "id": "item2cont",
-      "elType": "container",
-      "settings": {"_title": "Second Item Title", "content_width": "full"},
-      "elements": [
-        {
-          "id": "item2text",
-          "elType": "widget",
-          "widgetType": "text-editor",
-          "settings": {
-            "editor": "<p>Content for second item</p>",
-            "text_color": "#64748B",
-            "typography_typography": "custom",
-            "typography_font_size": {"unit": "rem", "size": 0.9375},
-            "typography_line_height": {"unit": "em", "size": 1.7}
-          },
-          "elements": [],
-          "isInner": false
-        }
-      ],
-      "isInner": true,
-      "isLocked": true
-    }
-  ],
-  "isInner": false
-}
-```
-
-**Iron rule:** `items[]` length must equal the count of `isLocked: true` containers in `elements[]`, in the same order. The `_id` on each item should match the order of locked containers (they're paired by index, not by ID, but consistent IDs make debugging easier).
-
-`isLocked: true` is what tells Elementor this container is the body for the corresponding accordion item — without it, the container shows up as a sibling section, not inside the accordion.
+Use only when the design genuinely can't be expressed with native widgets. The `html` widget is opaque to the Elementor UI — values inside aren't editable through controls and don't respond to the responsive breakpoints unless you write your own media queries inside a `<style>` block.
