@@ -76,4 +76,127 @@ Always provide `_tablet` and `_mobile` overrides for any setting that visibly ch
 - `nested-accordion` with `items[]` count ≠ `isLocked: true` container count — accordion fails to render or shows ghost items.
 - `type: "section"` at the top level on a modern Elementor (3.16+) — imports as a deprecated section block; needs manual conversion to containers.
 - Missing `version` or `version` not `"0.4"` — import may reject the file.
-- Pro-only widgets (`form`, `nested-accordion`) on a free Elementor install — placeholder "missing widget" cards in the editor.
+- Pro-only widgets (`form`, `nested-accordion`) on a free Elementor install — placeholder "missing widget" cards in the editor. (If the user has Pro confirmed, this isn't an issue — go ahead and use them.)
+
+## HTML-widget overuse (the most common mistake)
+
+Symptoms: client can't edit a heading because it's inside an HTML widget; mobile breakpoints don't reflow the layout; theme styles don't apply; the responsive controls panel is empty for that block.
+
+Cause: reached for the `html` widget when a combination of native widgets + `custom_css` would have worked.
+
+Fix: re-read the "widgets first" decision tree in `SKILL.md`. Trust pills are `icon-box`. Feature lists are `icon-list`. FAQ Qs are `accordion`. Stat numbers are `counter`. Card titles + subtitles are `heading` + `text-editor`. Eyebrow chips are a `heading` widget with `custom_css` doing the pill background and pulse dot. The only legitimate HTML widgets are decorative shells where every editable value has been pushed out to its own native widget inside the shell.
+
+## FAQ accordion question gets underlined on hover
+
+Symptom: in Elementor's preview the accordion title looks fine, but on the published site the question text gets a `text-decoration: underline` when hovered.
+
+Cause: many WordPress themes apply `text-decoration: underline` to `.elementor-tab-title a` or `.elementor-tab-title:hover` via theme CSS that outranks Elementor's defaults.
+
+Fix: add this `custom_css` to the accordion widget:
+
+```css
+selector .elementor-accordion-title,
+selector .elementor-tab-title,
+selector .elementor-tab-title a,
+selector .elementor-tab-title *,
+selector .elementor-tab-title:hover,
+selector .elementor-tab-title:hover * {
+  text-decoration: none !important;
+  border-bottom: 0 !important;
+}
+```
+
+The `:hover *` descendant selector is the part most people forget — the title text is in an inner span, and overriding only `.elementor-tab-title:hover` leaves the span's underline intact.
+
+## Button hover text becomes invisible
+
+Symptom: an outline-style button looks correct at rest, but on hover the background swaps to white/navy and the text disappears (because the text stayed its base color, which now matches the new background).
+
+Cause: Elementor's `hover_color` setting works for buttons in some themes but is overridden by the theme's `.elementor-button-text` color rule in others.
+
+Fix: don't rely on `hover_color` alone. Add explicit `custom_css`:
+
+```css
+selector .elementor-button:hover {
+  background: #FFFFFF !important;
+  color: #0B2C4D !important;
+  border-color: #FFFFFF !important;
+}
+selector .elementor-button:hover .elementor-button-text {
+  color: #0B2C4D !important;
+}
+```
+
+The inner `.elementor-button-text` span needs its own color override because its rule wins specificity over the outer button.
+
+## Stat grid stacks vertically when you set `flex_direction: row`
+
+Symptom: you build a 4-column stat strip with `flex_direction: "row"` in JSON settings, but the columns stack vertically on render.
+
+Cause: Elementor's inner `.e-con-inner` wrapper applies its own column flex, and the outer container's row direction doesn't propagate to the inner wrapper.
+
+Fix: force both layers with `!important` in `custom_css`:
+
+```css
+selector,
+selector > .e-con-inner {
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: nowrap !important;
+  align-items: center !important;
+  gap: 24px !important;
+}
+selector > .e-con,
+selector > .e-con-inner > .e-con {
+  flex: 1 1 0 !important;
+  max-width: 25% !important;
+  width: 25% !important;
+}
+```
+
+The `>.e-con-inner` part is the key — without it, only the outer container changes and the inner wrapper still imposes column.
+
+## Mobile reordering: hero image needs to be between heading and paragraph
+
+Symptom: on desktop the hero is text-left + image-right (two columns). On mobile when the columns stack, you want the order to be: heading → image → paragraph + CTA. Natural flex column order gives heading → paragraph + CTA → image, which is wrong.
+
+Fix: structure the desktop layout as **three** sibling containers, not two: `lt` (heading), `right` (image), `lb` (paragraph + CTA + meta). Use `grid-template-areas` to lay them out as two columns on desktop (`lt` and `lb` stack in the left column, `right` spans both rows in the right column). On mobile, switch to flex column and use the `order` property to put `right` between `lt` and `lb`. See `custom-css.md` for the full pattern.
+
+## Mobile hero needs different layout (full-bleed dark image overlay)
+
+Symptom: the desktop hero is a clean text-on-light split, but on mobile the same layout looks empty/awkward — you want a full-bleed image background with a navy overlay and white text instead.
+
+Fix: don't redo it with `custom_css`. Use Elementor's native mobile-variant background controls:
+
+```json
+{
+  "background_image_mobile": {"url": "https://.../bg.jpg"},
+  "background_overlay_color_mobile": "rgba(11,44,77,0.85)",
+  "background_overlay_background_mobile": "classic"
+}
+```
+
+For the text-color flip on mobile (everything goes white), set `title_color_mobile`, `text_color_mobile` on each widget. These are native settings, editable through the Elementor controls panel under the mobile breakpoint icon.
+
+If you must hide the desktop portrait card entirely on mobile (because the design is fundamentally different), use the widget's `hide_mobile: "hidden-mobile"` setting — that's the native way, no `display:none` in `custom_css` needed.
+
+## Counter widget shows 0 in editor
+
+Symptom: in Elementor's editor, the `counter` widget always displays `0+` regardless of `ending_number`. Looks broken.
+
+Cause: not broken — counters animate from `starting_number` only when scrolled into view on the front-end. The editor doesn't trigger the scroll-into-view event.
+
+Fix: verify on the published page, not in the editor. If the user reports "the counter shows 0," walk them through viewing the live preview.
+
+## Non-numeric "stats" (24/7, $100K, 4.9★) don't work with counter
+
+The counter widget animates from 0 and renders integers/decimals only. For values like `24/7`, `$100K`, or `4.9★`, use a `heading` widget instead. Style the suffix with an inline `<small>` span and color it red via `custom_css` on `selector small`:
+
+```json
+{
+  "title": "4.9<small>★</small>",
+  "custom_css": "selector small{color:#E63946;font-size:24px;margin-left:2px;font-weight:800}"
+}
+```
+
+This produces the same visual as a counter's suffix styling but doesn't require numeric animation.

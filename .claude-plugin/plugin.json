@@ -1,6 +1,6 @@
 {
   "name": "elementor-json",
-  "description": "Convert Figma/screenshot designs into Elementor template JSON for WordPress. Reference for container settings, widget catalog (heading, button, form, accordion, video), responsive variants, and custom_css usage.",
+  "description": "Convert Figma/screenshot designs into Elementor template JSON for WordPress. Ships two skills: `elementor-json` (56-widget catalog covering free + Pro widgets, container patterns, custom_css recipes, gotchas) and `elementor-verify` (strict widget-first auditor invoked as a fresh subagent to catch hallucinated HTML widgets and CSS-as-layout-settings violations). Includes the `/verify-elementor` slash command.",
   "author": {
     "name": "aleem2z"
   },

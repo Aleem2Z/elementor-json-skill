@@ -8,7 +8,7 @@
   "plugins": [
     {
       "name": "elementor-json",
-      "description": "Convert designs to Elementor-compatible JSON templates for WordPress. Includes widget catalog, container settings, responsive variants, and custom_css guidance.",
+      "description": "Convert designs to Elementor-compatible JSON templates for WordPress. Two skills (elementor-json + elementor-verify) plus the /verify-elementor command. 56-widget catalog (free + Pro), container patterns, custom_css recipes, gotchas, and a strict fresh-subagent auditor that catches hallucinated HTML widgets and JSON-settings-as-CSS violations.",
       "category": "wordpress",
       "source": ".",
       "homepage": "https://github.com/aleem2z/elementor-json-skill"
