@@ -62,6 +62,28 @@ IDs only need to be unique within one template, not globally. Elementor regenera
 
 Always provide `_tablet` and `_mobile` overrides for any setting that visibly changes between breakpoints — flex_direction, font sizes, padding, width.
 
+## Responsive padding/margin: always set `isLinked: false` or get fake 2–4px padding
+
+Symptom: in the published site (or even in the Elementor editor when switching to tablet/iPad/mobile views), containers and widgets get an unexpected ~2–4px padding on all four sides — even though nothing was set in the JSON. The client sees buttons and content looking unnaturally inset from container edges, especially on iPad.
+
+Cause: Elementor's editor auto-enables the "Link values together" toggle on padding/margin controls the moment the user (or the renderer) switches to tablet/iPad/mobile mode. When `isLinked` is not explicitly `false` in the JSON, Elementor treats the unset state as linked and falls back to whatever value WordPress's stylesheet baselines (typically 2–4px) across all four sides. The desktop variant usually escapes this, but the responsive variants get bitten.
+
+Fix: every padding and margin object in your JSON must include `"isLinked": false` explicitly — no exceptions. This covers `padding`, `padding_tablet`, `padding_mobile`, `margin`, `margin_tablet`, `margin_mobile`, **and** the underscore-prefixed Advanced-tab variants `_padding`, `_padding_tablet`, `_padding_mobile`, `_margin`, `_margin_tablet`, `_margin_mobile`. Applies to ALL widgets (containers, buttons, headings, icon-boxes, icon-lists, text-editors, etc.) — not just containers.
+
+Real-world failure mode: a container holding a phone button and a "Request Quote" button got fake padding around the buttons in iPad view, so the buttons looked unnaturally inset from the container edges. The client had to manually toggle "Link values together" off in the Elementor editor for every responsive variant — annoying and easily missed.
+
+Example of the corrected pattern:
+
+```json
+{
+  "padding": {"unit": "px", "top": "60", "right": "0", "bottom": "60", "left": "0", "isLinked": false},
+  "padding_tablet": {"unit": "px", "top": "40", "right": "0", "bottom": "40", "left": "0", "isLinked": false},
+  "padding_mobile": {"unit": "px", "top": "30", "right": "0", "bottom": "30", "left": "0", "isLinked": false}
+}
+```
+
+The verifier (elementor-verify skill) will flag any padding/margin object missing `isLinked: false` on a responsive variant.
+
 ## Common silent-failure causes
 
 - `typography_*` without `typography_typography: "custom"` — typography ignored.

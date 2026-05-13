@@ -20,7 +20,9 @@ This skill catches both.
 
 ## How you'll be invoked
 
-You'll receive a target JSON file path. Read it, audit it against the rules below, fix violations in-place using the Edit tool, then return a structured report in the exact format at the bottom of this file. Do not return anything other than that report — the calling agent parses it to decide whether to mark the file PASS or FAIL.
+You'll receive a target JSON file path. Optionally, you may also receive an HTML reference file path — if provided, use it to perform a third audit (design fidelity) in addition to the widget-first audit. If no HTML reference is given, skip the comparative design-fidelity checks but still enforce the universal rules (e.g. `isLinked: false` on all responsive paddings).
+
+Read the target JSON (and HTML reference, if provided), audit against the rules below, fix violations in-place using the Edit tool, then return a structured report in the exact format at the bottom of this file. Do not return anything other than that report — the calling agent parses it to decide whether to mark the file PASS or FAIL.
 
 ## The decision tree for every `html` widget
 
@@ -122,6 +124,50 @@ For each `custom_css` field (note: also check the `_custom_css` key — some the
 
 The rule of thumb: **less custom_css is better.** If a custom_css block could be shrunk by moving some of its rules to JSON settings, shrink it. A 200-line custom_css block is almost always 80% violations.
 
+## The universal padding/margin check (run on every audit, no HTML needed)
+
+This check runs on EVERY audit, regardless of whether an HTML reference was provided. It's a hard-fail rule that prevents WordPress/Elementor's fake auto-padding bug on responsive breakpoints.
+
+- Walk every widget and every container in the JSON recursively.
+- For every padding/margin object — including `padding`, `padding_tablet`, `padding_mobile`, `margin`, `margin_tablet`, `margin_mobile`, `_padding`, `_padding_tablet`, `_padding_mobile`, `_margin`, `_margin_tablet`, `_margin_mobile` — verify that `"isLinked": false` is explicitly present on the object.
+- If `isLinked` is missing OR `isLinked: true`: **VIOLATION**. Fix by adding/changing the field to `"isLinked": false` in-place. This is non-negotiable — Elementor's responsive padding/margin controls default to "Link values together" in tablet/iPad/mobile views, which silently injects fake 2-4px padding when individual sides differ.
+
+These violations are reported under **UNIVERSAL ISSUES FIXED**, not the widget-first VIOLATIONS list.
+
+**Scope: This check applies ONLY to the 12 padding/margin keys listed above.** Other linkable-corner / linkable-sides keys in Elementor JSON — `border_radius`, `border_width`, `flex_gap`, `_flex_gap`, `text_padding`, `icon_padding`, `title_padding`, `content_padding`, `image_border_radius` (and their responsive variants) — also take `isLinked`, but they are not affected by the responsive auto-link bug. They may use `isLinked: true` legitimately when the design genuinely wants all four corners/sides equal. Do not change `isLinked` on those keys.
+
+## Design fidelity audit (only when HTML reference is provided)
+
+If — and only if — an HTML reference file path was provided alongside the JSON target, run this third audit. Read the HTML file in full first, extract its CSS (inline `<style>`, inline `style=""` attributes, and any same-directory linked stylesheet you can resolve), then perform these three checks. All findings go under **DESIGN FIDELITY ISSUES** in the report.
+
+### A. Color palette compliance
+
+- Parse the HTML reference for every distinct color value used: hex (`#fff`, `#ffffff`), `rgb(...)`, `rgba(...)`, `hsl(...)`, `hsla(...)`, and named CSS colors (`white`, `transparent`, etc.). Build this as the **source palette**.
+- Walk every color-setting field in the JSON: `title_color`, `text_color`, `background_color`, `background_overlay_color`, `border_color`, `button_background_color`, `button_text_color`, `icon_color`, `primary_color`, `secondary_color`, `heading_color`, `description_color`, `_background_color`, all `*_hover_*` color variants, and any `color`/`background-color`/`border-color` declarations inside surviving `custom_css` blocks. **Exclusion: Colors that appear only inside `url("data:image/svg+xml,...")` strings (whether URL-encoded as `%23xxxxxx` or plain `#xxxxxx` inside an encoded SVG) are part of an SVG asset, not a widget-applied color. They were already justified at the custom_css decision tree. Do NOT include those in the palette check, do NOT flag them as violations, do NOT auto-fix them.
+- Every color value in the JSON MUST be in the source palette. Allow small variance for transparency/alpha when the base hex matches (e.g. `#3b82f6` in HTML → `rgba(59, 130, 246, 0.1)` in JSON is acceptable; `#3b82f6` in HTML → `#1e40af` in JSON is NOT).
+- If a JSON color is not in the source palette:
+  1. **If the HTML had an explicit color rule for the corresponding element** (you can identify which HTML rule applied) and the JSON drifted away from it: **VIOLATION**. Fix in-place to the HTML color.
+  2. **If the JSON color is within ~10% RGB distance of an HTML palette color**: **VIOLATION**. Auto-fix to the nearest palette color.
+  3. **If the HTML left the color unspecified for this element AND the JSON color is not within ~10% of any palette color**: do NOT auto-substitute (you'd be guessing). Mark as **JUSTIFIED with an INFERENCE note**, e.g. "Color `#3B82F6` on widget `icon7a2` was inferred — HTML had no explicit color rule for this icon. User confirmation needed if this is wrong." This is NOT a REMAINING ISSUE — it does not trip VERDICT: FAIL. It surfaces in the report so the user can spot and override if needed, but the verifier does not block on inferences alone.
+  4. **If the JSON has multiple plausible palette matches and you cannot pick deterministically**: same as case 3 — mark JUSTIFIED with an INFERENCE note listing the candidates.
+
+### B. Spacing compliance
+
+- Extract padding, margin, and gap values from the HTML CSS — both shorthand (`padding: 20px 24px`) and longhand (`padding-top: 20px`). Build a list of spacing tokens used by the design.
+- Walk every padding, margin, and gap field in the JSON. Padding/margin keys are the 12 listed in the universal check above. Gap keys to walk: `flex_gap`, `_flex_gap`, `gap`, `_gap`, `row_gap`, `column_gap`, and their responsive variants (`*_tablet`, `*_mobile`).
+- Compare each padding/margin/gap in the JSON to that token list.
+- A JSON value deviates significantly (>20% off the nearest source token, OR a default Elementor 10px appearing where the HTML had no spec at all) → **VIOLATION**. Fix it to the source value.
+- Special attention: in multi-card rows (pricing tiers, feature grids), check that inner padding is consistent across siblings. If the middle card is taller than its siblings because its inner padding was dropped while siblings kept theirs, that's a VIOLATION — restore the inner padding on the missing card.
+
+### C. Decorative effect coverage
+
+- Find every `::before` and `::after` rule in the source CSS.
+- Find every `@keyframes` definition and every `:hover` rule that uses `transition`, `transform`, color change, or any other animated property.
+- For each, locate the corresponding JSON widget (by class name, id, position, or content match) and verify it has a `custom_css` block implementing the effect.
+  - Missing `::before`/`::after` on the corresponding widget → **VIOLATION**. Add the `custom_css` block per the patterns in `~/.claude/skills/elementor-json/references/custom-css.md`.
+  - Missing `:hover` transition/transform → **VIOLATION**. This typically requires BOTH (a) hover-state values in the widget's JSON settings (e.g. `background_hover_color`, `_transform_translateY_effect_hover`) AND (b) a `custom_css` `transition` rule for properties Elementor can't animate via JSON. Generators commonly do one without the other — flag and fix both.
+  - Missing `@keyframes` animation → **VIOLATION**. Add the keyframes + `animation` rule as a `custom_css` block on the right widget.
+
 ## High-frequency mistakes to specifically scan for
 
 - Audit both `custom_css` and `_custom_css` keys. Some themes (e.g. Shelder) add `_custom_css` as a parallel field — same audit rules apply to both. If a single element has both, audit each independently.
@@ -137,6 +183,10 @@ The rule of thumb: **less custom_css is better.** If a custom_css block could be
 - `text-decoration: underline` set in `custom_css` — should be the JSON `text_decoration` setting on the heading/text-editor.
 - Custom counter implementation — use the `counter` widget.
 - A whole nav menu or hero in one html widget — almost certainly splittable into native widgets + `custom_css` for decoration.
+- Padding/margin object missing `isLinked: false` on a responsive variant (`padding_tablet`, `padding_mobile`, etc.) — auto-creates fake 2-4px padding in Elementor's editor.
+- Color value in JSON that doesn't appear anywhere in the source HTML's palette — generator hallucinated a theme default.
+- Source HTML had a `::before`/`::after` decorative element that the JSON dropped — must be added as a `custom_css` block on the right widget.
+- Source HTML had a `:hover` transition/transform effect that the JSON dropped — must be added as widget hover-state JSON settings + a `custom_css` transition for properties Elementor can't animate via JSON.
 
 ## Where to look for more native widget templates
 
@@ -172,12 +222,15 @@ When you edit `custom_css` strings, remember JSON requires `\n` for newlines and
 
 ## Required output format
 
-Return exactly this structure (no preamble, no postscript):
+Return exactly this structure (no preamble, no postscript). The report has three audit sections: **VIOLATIONS FOUND** (widget-first), **UNIVERSAL ISSUES FIXED** (isLinked and other always-checked items), and **DESIGN FIDELITY ISSUES** (only populated when an HTML reference was provided — otherwise show `DESIGN FIDELITY ISSUES: N/A (no HTML reference provided)`). Inside **DESIGN FIDELITY ISSUES**, a sub-bucket **INFERENCES (justified, user may want to review)** lists items where the verifier could not deterministically pick a value (e.g. case 3 / case 4 color inferences). Inferences are JUSTIFIED — they are listed for user visibility but are NOT counted as REMAINING ISSUES and do NOT trip `VERDICT: FAIL`.
+
+**PASS example** (clean run, HTML reference provided):
 
 ```
 ELEMENTOR-VERIFY REPORT
 ========================
 Target: <absolute path to JSON>
+HTML Reference: <absolute path to HTML, or "none">
 
 VIOLATIONS FOUND: <N>
   - <widget id> @ <JSON path>: <what was wrong>
@@ -188,24 +241,45 @@ JUSTIFIED HTML/CUSTOM_CSS: <M>
   - <widget id> @ <JSON path>: <one-line justification — what's outside Elementor's control surface>
   - ...
 
-FIXES APPLIED: <N> (file edited in place)
-REMAINING ISSUES: <should be 0; if non-zero, list each>
+UNIVERSAL ISSUES FIXED: <U>
+  - <widget id or container id> @ <JSON path>.<field>: <e.g. "padding_tablet missing isLinked: false">
+      Fix applied: <e.g. "Set isLinked: false on padding_tablet object">
+  - ...
+
+DESIGN FIDELITY ISSUES: <D>   (or: N/A (no HTML reference provided))
+  - Color: <widget id> @ <JSON path>.<field>: <e.g. "title_color #1e40af not in HTML palette; HTML used #3b82f6">
+      Fix applied: <e.g. "Updated title_color to #3b82f6 to match source">
+  - Spacing: <widget id> @ <JSON path>.<field>: <e.g. "padding 10px but HTML middle card had padding 32px 24px">
+      Fix applied: <e.g. "Set padding to 32px 24px to match siblings">
+  - Decorative: <widget id> @ <JSON path>: <e.g. "HTML had ::before gradient connector line dropped in JSON">
+      Fix applied: <e.g. "Added custom_css block with ::before per timeline pattern in references/custom-css.md">
+  - Hover: <widget id> @ <JSON path>: <e.g. "HTML had :hover transform: translateY(-4px) + box-shadow transition dropped">
+      Fix applied: <e.g. "Added _transform_translateY_effect_hover JSON setting + custom_css transition for box-shadow">
+  - ...
+
+  INFERENCES (justified, user may want to review): <I>
+    - Color: <widget id> @ <JSON path>.<field>: <e.g. "icon_color #3B82F6 was inferred — HTML had no explicit color rule for this icon. User confirmation needed if this is wrong.">
+    - ...
+
+FIXES APPLIED: <total across all three sections> (file edited in place)
+REMAINING ISSUES: <should be 0; if non-zero, list each. INFERENCES are NOT counted here.>
 
 VERDICT: PASS
 ```
 
-- Use `VERDICT: PASS` only when `REMAINING ISSUES` is 0 (or all remaining items are JUSTIFIED with a written reason).
-- Use `VERDICT: FAIL` when you cannot fully resolve violations (e.g., a fix requires a design decision you cannot make alone, or a violation type you don't know how to fix). Do not pretend a partial fix is a pass.
-- If the JSON had zero `html` widgets and zero `custom_css` blocks to begin with, return `VIOLATIONS FOUND: 0` and `VERDICT: PASS` immediately.
+- Use `VERDICT: PASS` only when `REMAINING ISSUES` is 0 (or all remaining items are JUSTIFIED with a written reason). INFERENCE notes are JUSTIFIED by definition and do NOT block a PASS verdict — a clean run with one or more INFERENCES still passes.
+- Use `VERDICT: FAIL` when you cannot fully resolve violations (e.g., a fix requires a design decision you cannot make alone, or a violation type you don't know how to fix). Do not pretend a partial fix is a pass. Do NOT use FAIL for INFERENCE notes alone — inferences are surfaced for user visibility, not as blockers.
+- If the JSON had zero `html` widgets and zero `custom_css` blocks AND zero universal/fidelity issues to begin with, return all-zero counts and `VERDICT: PASS` immediately.
 
-**FAIL example** (when something can't be resolved):
+**FAIL example** (when something can't be resolved, with HTML reference):
 
 ```
 ELEMENTOR-VERIFY REPORT
 ========================
-Target: /Users/.../hero-template.json
+Target: /Users/.../pricing-template.json
+HTML Reference: /Users/.../pricing-source.html
 
-VIOLATIONS FOUND: 3
+VIOLATIONS FOUND: 2
   - html7a2 @ content[0].elements[2]: Trust pill rendered as inline HTML
       Fix applied: Replaced with icon-box widget; preserved id; carried over _padding
   - html3f8 @ content[1].elements[0]: Stat card with inline number + label
@@ -214,8 +288,30 @@ VIOLATIONS FOUND: 3
 JUSTIFIED HTML/CUSTOM_CSS: 1
   - htmlovr5 @ content[2].elements[1]: Overlapping absolute-positioned chips on hero image — genuinely outside Elementor's control surface; editable text already split into separate heading widgets
 
-FIXES APPLIED: 2
-REMAINING ISSUES: 1
+UNIVERSAL ISSUES FIXED: 6
+  - cont_a1 @ content[0].settings.padding_tablet: missing isLinked: false
+      Fix applied: Added "isLinked": false
+  - cont_a1 @ content[0].settings.padding_mobile: isLinked was true
+      Fix applied: Set "isLinked": false
+  - wid_b7 @ content[1].elements[0].settings._margin_tablet: missing isLinked: false
+      Fix applied: Added "isLinked": false
+  - (3 more similar fixes elided for brevity in this example)
+
+DESIGN FIDELITY ISSUES: 4
+  - Color: wid_c3 @ content[2].elements[1].settings.title_color: "#1e40af" not in HTML palette
+      Fix applied: Updated to "#3b82f6" to match source HTML's brand color
+  - Spacing: wid_d5 @ content[3].elements[1].settings.padding: middle pricing card had no inner padding while siblings had 32px 24px
+      Fix applied: Set padding to {top:32,right:24,bottom:32,left:24,unit:"px",isLinked:false}
+  - Decorative: cont_e9 @ content[3]: HTML had ::before horizontal gradient connector line between numbered step circles, dropped in JSON
+      Fix applied: Added custom_css block on container with ::before gradient line per timeline pattern in references/custom-css.md
+  - Hover: wid_f4 @ content[4].elements[0]: HTML had :hover with color change + transform translateY(-2px), JSON had translateY but no color hover
+      Fix applied: Added title_color_hover in JSON settings + custom_css transition for color/transform
+
+  INFERENCES (justified, user may want to review): 1
+    - Color: icon7a2 @ content[2].elements[3].settings.icon_color: "#3B82F6" was inferred — HTML had no explicit color rule for this icon. User confirmation needed if this is wrong.
+
+FIXES APPLIED: 12
+REMAINING ISSUES: 1   (INFERENCES are NOT counted here; the verdict below is driven by the unresolved carousel, not by the inference above)
   - cssX99 @ content[3].elements[0].settings.custom_css: 80-line custom_css block implementing a custom carousel — requires design decision on whether to drop the carousel entirely or build it as a separate Pro slides widget (not currently available in this template's catalog)
 
 VERDICT: FAIL
